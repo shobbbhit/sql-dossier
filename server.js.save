@@ -1,0 +1,16 @@
+
+// API endpoint
+app.post("/query", (req, res) => {
+  const { query } = req.body;
+
+  db.all(query, [], (err, rows) => {
+    if (err) {
+      return res.status(400).json({ error: err.message });
+    }
+    res.json({ rows });
+  });
+});
+
+app.listen(3000, () => {
+  console.log("Server running on http://localhost:3000");
+});
