@@ -6,13 +6,19 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Create in-memory database
-const db = new sqlite3.Database(":memory:");
+// Create database (safe for Render)
+const db = new sqlite3.Database("./database.db", (err) => {
+  if (err) {
+    console.error("DB Error:", err.message);
+  } else {
+    console.log("Connected to SQLite database.");
+  }
+});
 
+// Initialize DB
 db.serialize(() => {
-  // Create table
   db.run(`
-    CREATE TABLE transaction_logs (
+    CREATE TABLE IF NOT EXISTS transaction_logs (
       id INTEGER,
       timestamp TEXT,
       ip_address TEXT,
@@ -21,7 +27,8 @@ db.serialize(() => {
     )
   `);
 
-  // Insert data
+  db.run(`DELETE FROM transaction_logs`); // reset data
+
   db.run(`
     INSERT INTO transaction_logs VALUES
     (1, '02:14:05', '192.168.0.12', 'UNAUTHORIZED_ACCESS', 'HIGH'),
@@ -32,7 +39,7 @@ db.serialize(() => {
   `);
 });
 
-// API endpoint to run queries
+// API
 app.post("/query", (req, res) => {
   const { query } = req.body;
 
@@ -42,18 +49,19 @@ app.post("/query", (req, res) => {
 
   db.all(query, [], (err, rows) => {
     if (err) {
+      console.error(err.message);
       return res.status(400).json({ error: err.message });
     }
     res.json({ rows });
   });
 });
 
-// Health check (optional but useful)
+// Health check
 app.get("/", (req, res) => {
   res.send("SQL Dossier Backend Running 🚀");
 });
 
-// Start server
+// PORT FIX (CRITICAL)
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
